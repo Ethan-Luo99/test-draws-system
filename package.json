@@ -1,0 +1,10 @@
+{
+  "name": "test-draws-system",
+  "private": true,
+  "workspaces": ["backend", "mobile-app", "restaurant-dashboard"],
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:mobile": "cd mobile-app && npm start",
+    "dev:dashboard": "cd restaurant-dashboard && npm start"
+  }
+}
