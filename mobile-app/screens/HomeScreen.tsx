@@ -60,7 +60,10 @@ export default function HomeScreen({ navigation }: any) {
   };
 
   const renderDrawItem = ({ item }: { item: Draw }) => (
-    <View style={styles.drawItem}>
+    <TouchableOpacity 
+      style={styles.drawItem}
+      onPress={() => navigation.navigate('DrawDetails', { id: item.id })}
+    >
       <Text style={styles.drawTitle}>{item.title}</Text>
       <Text style={styles.drawDescription}>{item.description}</Text>
       <View style={styles.drawMeta}>
@@ -76,7 +79,7 @@ export default function HomeScreen({ navigation }: any) {
           Participants: {item.participant_count} / Participants: {item.participant_count}
         </Text>
       )}
-    </View>
+    </TouchableOpacity>
   );
 
   const renderEmptyState = () => (

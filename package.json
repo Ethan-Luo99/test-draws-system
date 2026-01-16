@@ -1,10 +1,17 @@
 {
   "name": "test-draws-system",
   "private": true,
-  "workspaces": ["backend", "mobile-app", "restaurant-dashboard"],
+  "workspaces": [
+    "backend",
+    "mobile-app",
+    "restaurant-dashboard"
+  ],
   "scripts": {
     "install:all": "npm install && cd backend && npm install && cd ../mobile-app && npm install && cd ../restaurant-dashboard && npm install",
     "dev:mobile": "cd mobile-app && npm start",
     "dev:dashboard": "cd restaurant-dashboard && npm start"
+  },
+  "dependencies": {
+    "react-native": "^0.83.1"
   }
 }

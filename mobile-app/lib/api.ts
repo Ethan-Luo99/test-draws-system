@@ -1,15 +1,16 @@
-// mobile-app/lib/api.ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios, { AxiosResponse } from 'axios';
 import { authHelpers } from './supabase';
 
-// API configuration / Configuration API
-const API_BASE_URL = 'http://localhost:3000/api/v1';
+// Production API URL
+const API_BASE_URL = 'https://test-draws-system.vercel.app/api/v1';
 
-// Storage keys / Clés de stockage
+// Storage keys
 const TOKEN_KEY = 'custom_jwt_token';
+const USER_INFO_KEY = 'user_info';
+const DEFAULT_BUSINESS_KEY = 'default_business';
 
-// Create axios instance / Créer l'instance axios
+// Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
@@ -18,7 +19,7 @@ const api = axios.create({
   },
 });
 
-// Request interceptor: Add auth token / Intercepteur de requête: Ajouter le token d'auth
+// Request interceptor: Add auth token
 api.interceptors.request.use(
   async (config) => {
     const token = await getStoredToken();
@@ -32,193 +33,120 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor: Handle errors / Intercepteur de réponse: Gérer les erreurs
+// Response interceptor: Handle errors
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid / Token expiré ou invalide
-      await clearStoredToken();
-      // You might want to trigger a re-login here / Vous pourriez vouloir déclencher une re-connexion ici
+      // Token expired or invalid
+      await clearAuthData();
+      // In a real app, you might emit an event to navigate to login
     }
     return Promise.reject(error);
   }
 );
 
-// Token management functions / Fonctions de gestion des tokens
+// Token & User Data Management
 export const getStoredToken = async (): Promise<string | null> => {
   try {
-    const token = await AsyncStorage.getItem(TOKEN_KEY);
-    return token;
+    return await AsyncStorage.getItem(TOKEN_KEY);
   } catch (error) {
-    console.error('Error getting stored token:', error);
     return null;
   }
 };
 
-export const storeToken = async (token: string): Promise<void> => {
+export const storeAuthData = async (data: { token: string, user: any, business?: any }) => {
   try {
-    await AsyncStorage.setItem(TOKEN_KEY, token);
-  } catch (error) {
-    console.error('Error storing token:', error);
-    throw error;
-  }
-};
-
-export const clearStoredToken = async (): Promise<void> => {
-  try {
-    await AsyncStorage.removeItem(TOKEN_KEY);
-  } catch (error) {
-    console.error('Error clearing stored token:', error);
-  }
-};
-
-// Token exchange with backend / Échange de token avec le backend
-export const exchangeSupabaseTokenForCustomJWT = async (): Promise<string> => {
-  try {
-    // Get current Supabase session / Obtenir la session Supabase actuelle
-    const session = await authHelpers.getSession();
-    if (!session?.access_token) {
-      throw new Error('No Supabase session found / Aucune session Supabase trouvée');
-    }
-
-    // Exchange Supabase token for custom JWT / Échanger le token Supabase pour un JWT personnalisé
-    const response = await axios.post(`${API_BASE_URL}/auth/exchange`, {
-      supabase_token: session.access_token,
-    });
-
-    if (response.data?.custom_token) {
-      await storeToken(response.data.custom_token);
-      return response.data.custom_token;
-    } else {
-      throw new Error('No custom token received / Aucun token personnalisé reçu');
+    await AsyncStorage.setItem(TOKEN_KEY, data.token);
+    await AsyncStorage.setItem(USER_INFO_KEY, JSON.stringify(data.user));
+    if (data.business) {
+      await AsyncStorage.setItem(DEFAULT_BUSINESS_KEY, JSON.stringify(data.business));
     }
   } catch (error) {
-    console.error('Token exchange failed:', error);
-    throw new Error('Token exchange failed / Échec de l\'échange de token');
+    console.error('Error storing auth data:', error);
   }
 };
 
-// API service functions / Fonctions de service API
+export const clearAuthData = async () => {
+  try {
+    await AsyncStorage.multiRemove([TOKEN_KEY, USER_INFO_KEY, DEFAULT_BUSINESS_KEY]);
+  } catch (error) {
+    console.error('Error clearing auth data:', error);
+  }
+};
+
+export const getStoredBusiness = async () => {
+  try {
+    const data = await AsyncStorage.getItem(DEFAULT_BUSINESS_KEY);
+    return data ? JSON.parse(data) : null;
+  } catch {
+    return null;
+  }
+};
+
+// Auth Services
+export const authApi = {
+  // Exchange Supabase token for Backend JWT
+  exchangeToken: async (): Promise<any> => {
+    try {
+      const session = await authHelpers.getSession();
+      if (!session?.access_token) {
+        throw new Error('No Supabase session found');
+      }
+
+      const response = await axios.post(`${API_BASE_URL}/auth/exchange`, {
+        supabase_token: session.access_token,
+      });
+
+      if (response.data?.custom_token) {
+        await storeAuthData({
+          token: response.data.custom_token,
+          user: response.data.user,
+          business: response.data.default_business
+        });
+        return response.data;
+      }
+      throw new Error('Invalid response from server');
+    } catch (error) {
+      console.error('Token exchange failed:', error);
+      throw error;
+    }
+  },
+};
+
+// Draw Services
 export const drawsApi = {
-  // Get draws list / Obtenir la liste des tirages
-  getDraws: async (businessId?: string, status?: string) => {
+  // Get draws (auto-injects business_id if not provided)
+  getDraws: async (businessId?: string) => {
     try {
-      const params: any = {};
-      if (businessId) params.business_id = businessId;
-      if (status) params.status = status;
+      let targetBid = businessId;
+      if (!targetBid) {
+        const business = await getStoredBusiness();
+        targetBid = business?.id;
+      }
+      
+      if (!targetBid) throw new Error('No business ID found');
 
-      const response: AxiosResponse = await api.get('/draws', { params });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching draws:', error);
-      throw error;
-    }
-  },
-
-  // Create a new draw / Créer un nouveau tirage
-  createDraw: async (drawData: any) => {
-    try {
-      const response: AxiosResponse = await api.post('/draws', drawData);
-      return response.data;
-    } catch (error) {
-      console.error('Error creating draw:', error);
-      throw error;
-    }
-  },
-
-  // Get draw details / Obtenir les détails du tirage
-  getDrawById: async (id: string) => {
-    try {
-      const response: AxiosResponse = await api.get(`/draws/${id}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching draw:', error);
-      throw error;
-    }
-  },
-
-  // Update a draw / Mettre à jour un tirage
-  updateDraw: async (id: string, drawData: any) => {
-    try {
-      const response: AxiosResponse = await api.put(`/draws/${id}`, drawData);
-      return response.data;
-    } catch (error) {
-      console.error('Error updating draw:', error);
-      throw error;
-    }
-  },
-
-  // Delete a draw / Supprimer un tirage
-  deleteDraw: async (id: string) => {
-    try {
-      const response: AxiosResponse = await api.delete(`/draws/${id}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error deleting draw:', error);
-      throw error;
-    }
-  },
-
-  // Get participants for a draw / Obtenir les participants pour un tirage
-  getDrawParticipants: async (id: string, page = 1, limit = 20) => {
-    try {
-      const response: AxiosResponse = await api.get(`/draws/${id}/participants`, {
-        params: { page, limit }
+      const response = await api.get('/draws', { 
+        params: { business_id: targetBid } 
       });
       return response.data;
     } catch (error) {
-      console.error('Error fetching participants:', error);
       throw error;
     }
   },
 
-  // Participate in a draw / Participer à un tirage
-  participateInDraw: async (id: string) => {
-    try {
-      const response: AxiosResponse = await api.post(`/draws/${id}/participants`);
-      return response.data;
-    } catch (error) {
-      console.error('Error participating in draw:', error);
-      throw error;
-    }
-  },
-};
-
-// Auth service functions / Fonctions de service d'authentification
-export const authApi = {
-  // Check if token exchange is needed / Vérifier si l'échange de token est nécessaire
-  ensureValidToken: async (): Promise<boolean> => {
-    try {
-      const storedToken = await getStoredToken();
-      
-      if (!storedToken) {
-        // Need to exchange Supabase token for custom JWT / Besoin d'échanger le token Supabase pour un JWT personnalisé
-        await exchangeSupabaseTokenForCustomJWT();
-        return true;
-      }
-
-      // Verify token is still valid (you could add a token validation endpoint)
-      // Vérifier que le token est toujours valide (vous pourriez ajouter un point de terminaison de validation de token)
-      return true;
-    } catch (error) {
-      console.error('Error ensuring valid token:', error);
-      return false;
-    }
+  // Get details
+  getDrawById: async (id: string) => {
+    const response = await api.get(`/draws/${id}`);
+    return response.data;
   },
 
-  // Refresh custom JWT token / Actualiser le token JWT personnalisé
-  refreshCustomToken: async (): Promise<string> => {
-    await exchangeSupabaseTokenForCustomJWT();
-    return getStoredToken() as Promise<string>;
-  },
-
-  // Clear all auth data / Effacer toutes les données d'authentification
-  clearAuthData: async (): Promise<void> => {
-    await clearStoredToken();
-    // Also clear Supabase session / Également effacer la session Supabase
-    await authHelpers.signOut();
-  },
+  // Join draw
+  joinDraw: async (id: string) => {
+    const response = await api.post(`/draws/${id}/participants`);
+    return response.data;
+  }
 };
 
 export default api;

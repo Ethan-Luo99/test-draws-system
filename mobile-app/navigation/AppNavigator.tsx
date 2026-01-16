@@ -21,17 +21,47 @@ const AuthStackNavigator = () => {
   );
 };
 
-// Main Tab Navigator (for authenticated users)
+import DrawDetailsScreen from '../screens/DrawDetailsScreen';
+
+// Main Stack Navigator inside Tab (to handle navigation from list to details)
+const HomeStack = createStackNavigator();
+const HomeStackNavigator = () => {
+  return (
+    <HomeStack.Navigator>
+      <HomeStack.Screen 
+        name="DrawsList" 
+        component={HomeScreen} 
+        options={{ 
+          title: 'Draws / Tirages',
+          headerStyle: { backgroundColor: '#3498db' },
+          headerTintColor: '#fff',
+        }}
+      />
+      <HomeStack.Screen 
+        name="DrawDetails" 
+        component={DrawDetailsScreen} 
+        options={{ 
+          title: 'Details / Détails',
+          headerStyle: { backgroundColor: '#3498db' },
+          headerTintColor: '#fff',
+        }}
+      />
+    </HomeStack.Navigator>
+  );
+};
+
+// Main Tab Navigator
 const MainTab = createBottomTabNavigator();
 const MainTabNavigator = () => {
   return (
     <MainTab.Navigator
       screenOptions={({ route }) => ({
+        headerShown: false, // Hide tab header because stack has its own
         tabBarLabel: ({ focused }) => {
+          // ... (keep existing label logic)
           let label: string;
-          
           switch (route.name) {
-            case 'Home':
+            case 'HomeTab':
               label = 'Draws / Tirages';
               break;
             case 'Profile':
@@ -40,7 +70,6 @@ const MainTabNavigator = () => {
             default:
               label = route.name;
           }
-          
           return (
             <Text style={{ 
               color: focused ? '#3498db' : '#7f8c8d',
@@ -53,21 +82,13 @@ const MainTabNavigator = () => {
         },
         tabBarActiveTintColor: '#3498db',
         tabBarInactiveTintColor: '#7f8c8d',
-        headerStyle: {
-          backgroundColor: '#3498db',
-        },
-        headerTintColor: '#fff',
-        headerTitleStyle: {
-          fontWeight: 'bold',
-        },
       })}
     >
       <MainTab.Screen 
-        name="Home" 
-        component={HomeScreen}
+        name="HomeTab" 
+        component={HomeStackNavigator}
         options={{
           title: 'Draws / Tirages',
-          headerTitle: 'My Draws / Mes Tirages',
         }}
       />
       <MainTab.Screen 
@@ -75,7 +96,9 @@ const MainTabNavigator = () => {
         component={ProfileScreen}
         options={{
           title: 'Profile / Profil',
-          headerTitle: 'My Profile / Mon Profil',
+          headerShown: true, // Profile doesn't have a stack, so show header
+          headerStyle: { backgroundColor: '#3498db' },
+          headerTintColor: '#fff',
         }}
       />
     </MainTab.Navigator>

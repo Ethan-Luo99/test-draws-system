@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, FlatList } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import { drawsApi } from '../services/drawsApi';
 
 export default function DrawDetailsScreen() {
   const route = useRoute<any>();
+  const navigation = useNavigation();
   const { id } = route.params;
   
   const [draw, setDraw] = useState<any>(null);
@@ -28,6 +29,33 @@ export default function DrawDetailsScreen() {
     }
   };
 
+  const handleCancel = async () => {
+    Alert.alert(
+      'Cancel Draw',
+      'Are you sure you want to cancel this draw? This action cannot be undone.',
+      [
+        { text: 'No', style: 'cancel' },
+        { 
+          text: 'Yes, Cancel', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await drawsApi.cancelDraw(id);
+              Alert.alert('Success', 'Draw cancelled', [
+                { text: 'OK', onPress: () => navigation.goBack() }
+              ]);
+            } catch (error: any) {
+              const msg = error.response?.data?.error || 'Failed to cancel draw';
+              Alert.alert('Error', msg);
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   useEffect(() => {
     fetchDetails();
   }, [id]);
@@ -35,7 +63,7 @@ export default function DrawDetailsScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#007AFF" />
       </View>
     );
   }
@@ -73,6 +101,13 @@ export default function DrawDetailsScreen() {
 
         <Text style={styles.info}>Current Participants: {participants.length}</Text>
       </View>
+
+      {/* Cancel Button - Only visible if active and no participants (backend enforces logic too) */}
+      {draw.status === 'active' && participants.length === 0 && (
+        <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+          <Text style={styles.cancelButtonText}>Cancel Draw</Text>
+        </TouchableOpacity>
+      )}
 
       {draw.status === 'completed' && draw.winner && (
         <View style={[styles.section, styles.winnerSection]}>
@@ -146,6 +181,18 @@ const styles = StyleSheet.create({
   info: {
     fontSize: 16,
     marginBottom: 5,
+  },
+  cancelButton: {
+    backgroundColor: '#ff3b30',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  cancelButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   winnerSection: {
     backgroundColor: '#fffbe6',

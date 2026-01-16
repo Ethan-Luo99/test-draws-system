@@ -54,12 +54,12 @@ npm run dev
 ```bash
 cd mobile-app
 npm install
-npx expo start
+npx expo start --offline
 ```
 
 ### Restaurant Dashboard
 ```bash
 cd restaurant-dashboard
 npm install
-npx expo start
+npx expo start --offline
 ```
