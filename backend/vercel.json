@@ -1,9 +1,4 @@
 {
-  "functions": {
-    "api/v1/**/*.ts": {
-      "runtime": "nodejs18.x"
-    }
-  },
   "routes": [
     {
       "src": "/api/v1/(.*)",
