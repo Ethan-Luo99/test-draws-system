@@ -3,7 +3,7 @@
   "private": true,
   "workspaces": ["backend", "mobile-app", "restaurant-dashboard"],
   "scripts": {
-    "dev:backend": "cd backend && npm run dev",
+    "install:all": "npm install && cd backend && npm install && cd ../mobile-app && npm install && cd ../restaurant-dashboard && npm install",
     "dev:mobile": "cd mobile-app && npm start",
     "dev:dashboard": "cd restaurant-dashboard && npm start"
   }

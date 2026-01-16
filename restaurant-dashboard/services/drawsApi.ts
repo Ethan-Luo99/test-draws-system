@@ -37,16 +37,24 @@ api.interceptors.response.use(
 // 抽奖相关API封装
 export const drawsApi = {
   // 获取抽奖列表
-  getDraws: (businessId: string, status?: string) => {
+  getDraws: (status?: string) => {
     return api.get('/draws', {
-      params: { business_id: businessId, status },
+      params: { status }, // business_id 会由拦截器自动注入
     });
   },
 
   // 创建抽奖
   createDraw: (drawData: any) => {
-    return api.post('/draws', drawData);
+    return api.post('/draws', drawData); // business_id 会由拦截器自动注入
   },
 
-  // 其他接口（获取详情、修改、删除等）后续补充
+  // 获取抽奖详情
+  getDrawById: (id: string) => {
+    return api.get(`/draws/${id}`);
+  },
+
+  // 获取参与者列表
+  getParticipants: (id: string) => {
+    return api.get(`/draws/${id}/participants`);
+  },
 };

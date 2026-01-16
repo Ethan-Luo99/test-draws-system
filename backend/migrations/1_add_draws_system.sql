@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS draws (
   title VARCHAR(255) NOT NULL, -- Draw title (e.g., "Win a dinner for two") / Titre du tirage (ex: "Gagner un dîner pour deux")
   description TEXT, -- Draw description / Description du tirage
   type VARCHAR(50) NOT NULL CHECK (type IN ('fixed_date', 'condition')), -- Draw type / Type de tirage
+  trigger_value INTEGER, -- Trigger value for condition-based draws (e.g. number of participants) / Valeur de déclenchement
   draw_date TIMESTAMP, -- Draw date (only for fixed_date type) / Date de tirage (seulement pour le type fixed_date)
   winning_probability DECIMAL(5,4) NOT NULL DEFAULT 0.01, -- Winning probability / Probabilité de gain
   status VARCHAR(50) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'closed', 'completed')),

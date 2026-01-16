@@ -1,8 +1,15 @@
 // backend/lib/db.ts
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
+import path from 'path';
 
-dotenv.config({ path: '../../.env' });
+// Load environment variables if not in production
+// Charger les variables d'environnement si ce n'est pas en production
+if (process.env.NODE_ENV !== 'production') {
+  // Try to load from root .env or local .env
+  dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
+  dotenv.config(); // Also try default .env
+}
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
